@@ -1,14 +1,5 @@
 #include "calcul.h"
 
-template <typename T>//template, because we have two stacks of different types
-void calcul::clearStack(std::stack <T>& s)
-{
-	while (s.size() != 0) {
-		s.pop();
-	}
-	return;
-}
-
 calcul::calcul()
 {
 	oper_priority = {
@@ -74,6 +65,15 @@ bool calcul::validation()
 	return true;
 }
 
+template <typename T>//template, because we have two stacks of different types
+void calcul::clearStack(std::stack <T>& s)
+{
+	while (s.size() != 0) {
+		s.pop();
+	}
+	return;
+}
+
 void calcul::readthread()
 {
 	char c;
@@ -123,12 +123,19 @@ void calcul::readthread()
 		{
 			while (operation.top() != "(")//we perform operations in parentheses
 			{
-				oper();
+				if (function.find(operation.top()) != function.end())
+				{
+					oper();
+					if (operation.size() == 0) break;//if there was a division by 0, then the stacks became empty and it is necessary to stop the cycle
+					continue;
+				}
+				expr_incor();
+				break;
 			}
-			operation.pop();//remove the opening bracket
-			std::cin.ignore();//extracting the viewed symbol from the stream
+			if (number.size()!=0) std::cin.ignore();//extracting the scanned symbol from the stream, provided that there was no stack clearing due to an incorrect expression
 			if (operation.size() != 0)
 			{
+				operation.pop();//if there was no division by zero, then the opening bracket remains in the stack and it must be removed from the stack
 				if (nonstandart() == -1)//checking that a non-standard function is valid
 				{
 					deleteStacksEr();
@@ -143,19 +150,24 @@ void calcul::readthread()
 	}
 }
 
+void calcul::expr_incor()
+{
+	std::cout << "Expression entered incorrectly" << std::endl;
+	clearStack(operation);
+	clearStack(number);
+}
+
 void calcul::deleteStacksEr()
 {
 	std::string s;
 	std::getline(std::cin, s, '\n');
-	clearStack(operation);
-	clearStack(number);
-	std::cout << "Expression entered incorrectly" << std::endl;
+	expr_incor();
 	std::cout << "To continue, press Enter" << std::endl;
 }
 
 void calcul::processing_oper(std::string c)//processing of the received options
 {
-	if ((operation.size() == 0) || (c == "("))//in any case, the opening bracket is either at the beginning of the stack, or we put it on the stack on top of other operations
+	if ((operation.empty()) || (c == "("))//in any case, the opening bracket is either at the beginning of the stack, or we put it on the stack on top of other operations
 	{
 		operation.push(c);
 		return;
@@ -200,9 +212,7 @@ void calcul::maths()//to process all raw operations with numbers
 		}
 		//there is no processing of functions from plugins as we consider them as soon as we met,
 		//so that complex expressions using non-standard functions can be correctly calculated
-		std::cout << "Expression entered incorrectly" << std::endl;
-		clearStack(operation);
-		clearStack(number);
+		expr_incor();
 		break;
 	}
 	if (number.size() != 0)
